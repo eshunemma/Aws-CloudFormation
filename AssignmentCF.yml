@@ -1,7 +1,7 @@
-template-file-path: /
+template-file-path: AssignmentCF.yml
 parameters:
-  User1Email: yaw@yaw.com
-  User2Email: emma@emma.com
   User1Username: yaw
+  User1Email: yaw@yaw.com
   User2Username: emma
+  User2Email: emma@emma.com
 tags: {}
