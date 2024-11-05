@@ -1,21 +1,40 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: CloudFormation template for IAM, S3 access, Secrets Manager, Parameter Store, EventBridge, and Lambda.
-
 Parameters:
   User1Email:
     Type: String
     Description: Email of the first user
   User1Username:
     Type: String
-    Description: username of the first user
+    Description: Username of the first user
   User2Email:
     Type: String
     Description: Email of the second user
   User2Username:
     Type: String
-    Description: username of the second user
-
+    Description: Username of the second user
 Resources:
+  # Secrets Manager secrets for passwords
+  User1PasswordSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: User1Password
+      Description: Randomly generated password for User1
+      GenerateSecretString:
+        SecretStringTemplate: "{}"
+        GenerateStringKey: password
+        PasswordLength: 16
+
+  User2PasswordSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: User2Password
+      Description: Randomly generated password for User2
+      GenerateSecretString:
+        SecretStringTemplate: "{}"
+        GenerateStringKey: password
+        PasswordLength: 16
+
   S3Group:
     Type: AWS::IAM::Group
     Properties:
@@ -35,16 +54,16 @@ Resources:
     Type: AWS::IAM::Group
     Properties:
       GroupName: EC2S3ReadOnlyGroup
-    Policies:
-      - PolicyName: EC2S3ReadOnlyPolicy
-        PolicyDocument:
-          Version: "2012-10-17"
-          Statement:
-            - Effect: Allow
-              Action:
-                - s3:GetObject
-                - s3:ListBucket
-              Resource: "*"
+      Policies:
+        - PolicyName: EC2S3ReadOnlyPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource: "*"
 
   IAMUser1:
     Type: AWS::IAM::User
@@ -52,10 +71,9 @@ Resources:
       Groups:
         - !Ref S3Group
       LoginProfile:
-        Password: asdfhbjai23423
+        Password: !Sub "{{resolve:secretsmanager:${User1PasswordSecret}:SecretString:password}}"
         PasswordResetRequired: true
-      UserName:
-        Ref: User1Username
+      UserName: !Ref User1Username
 
   IAMUser2:
     Type: AWS::IAM::User
@@ -63,7 +81,46 @@ Resources:
       Groups:
         - !Ref S3Group
       LoginProfile:
-        Password: asdfhbjai23423
+        Password: !Sub "{{resolve:secretsmanager:${User2PasswordSecret}:SecretString:password}}"
         PasswordResetRequired: true
-      UserName:
-        Ref: User2Username
+      UserName: !Ref User2Username
+
+  # Parameter Store
+  ParameterStoreUser1Email:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: IAM/User1/Email
+      Type: String
+      Value: !Ref User1Email
+
+  ParameterStoreUser2Email:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: IAM/User2/Email
+      Type: String
+      Value: !Ref User2Email
+
+Outputs:
+  User1Email:
+    Description: Password for User1
+    Value: !Ref User1Email
+    Export:
+      Name: User1Email
+
+  User1Password:
+    Description: Password for User1
+    Value: !Sub "{{resolve:secretsmanager:${User1PasswordSecret}:SecretString:password}}"
+    Export:
+      Name: User1Password
+
+  User2Email:
+    Description: Password for User2
+    Value: !Ref User2Email
+    Export:
+      Name: User2Email
+
+  User2Password:
+    Description: Password for User2
+    Value: !Sub "{{resolve:secretsmanager:${User2PasswordSecret}:SecretString:password}}"
+    Export:
+      Name: User2Password
